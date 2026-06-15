@@ -238,7 +238,7 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
                         Text(
                           '$day',
                           style: TextStyle(
-                            fontSize: 13,
+                            fontSize: 16,
                             fontWeight: isToday ? FontWeight.bold : FontWeight.normal,
                             color: isToday ? Colors.purple.shade700 : null,
                           ),
@@ -246,7 +246,7 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
                         // Exercise emoji from timetable
                         Text(
                           _muscleEmojis[_timetable[date.weekday] ?? 'rest'] ?? '💪',
-                          style: TextStyle(fontSize: 9),
+                          style: TextStyle(fontSize: 12),
                         ),
                         if (status >= 0)
                           _statusIcon(status),
