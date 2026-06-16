@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'screens/focus_screen.dart';
 import 'screens/finance_screen.dart';
 import 'screens/exercise_screen.dart';
@@ -25,10 +26,18 @@ class IreneHelperApp extends StatelessWidget {
     return MaterialApp(
       title: 'Irene Helper',
       debugShowCheckedModeBanner: false,
+      themeMode: ThemeMode.system,
       theme: ThemeData(
         colorScheme: ColorScheme.fromSeed(
           seedColor: Colors.teal,
           brightness: Brightness.light,
+        ),
+        useMaterial3: true,
+      ),
+      darkTheme: ThemeData(
+        colorScheme: ColorScheme.fromSeed(
+          seedColor: Colors.teal,
+          brightness: Brightness.dark,
         ),
         useMaterial3: true,
       ),
@@ -64,6 +73,7 @@ class _MainScreenState extends State<MainScreen> {
       bottomNavigationBar: NavigationBar(
         selectedIndex: _currentIndex,
         onDestinationSelected: (index) {
+          HapticFeedback.selectionClick();
           setState(() {
             _currentIndex = index;
           });

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
 import '../models/hobby_record.dart';
 import '../services/storage_service.dart';
@@ -67,9 +68,15 @@ class _HabitsScreenState extends State<HabitsScreen> {
 
   Future<void> _drinkWater() async {
     if (_waterCount >= 8) return;
+    HapticFeedback.lightImpact();
     setState(() => _waterCount++);
     await StorageService.saveInt('water_count', _waterCount);
     await StorageService.saveString('water_date', _waterDate);
+    if (_waterCount >= 8) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('🎉 8 glasses! Hydration goal reached!'), duration: Duration(seconds: 3), behavior: SnackBarBehavior.floating),
+      );
+    }
   }
 
   List<String> get _maskDaysThisWeek {
@@ -86,6 +93,7 @@ class _HabitsScreenState extends State<HabitsScreen> {
   }
 
   Future<void> _toggleSkincare(String date) async {
+    HapticFeedback.selectionClick();
     setState(() {
       if (_skincareDates.contains(date)) {
         _skincareDates.remove(date);
@@ -97,6 +105,12 @@ class _HabitsScreenState extends State<HabitsScreen> {
       'skincare_done',
       _skincareDates.map((d) => {'date': d}).toList(),
     );
+    final done = _maskDaysThisWeek.where((d) => _skincareDates.contains(d)).length;
+    if (done == _skincareDays.length) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('🧖 All skincare done this week!'), duration: Duration(seconds: 2), behavior: SnackBarBehavior.floating),
+      );
+    }
   }
 
   Future<void> _editSkincareDays() async {
@@ -271,6 +285,7 @@ class _HabitsScreenState extends State<HabitsScreen> {
                   practiceDate.year, practiceDate.month, practiceDate.day,
                   DateTime.now().hour, DateTime.now().minute,
                 );
+                HapticFeedback.mediumImpact();
                 setState(() {
                   _hobbies.insert(0, HobbyRecord(
                     id: DateTime.now().millisecondsSinceEpoch.toString(),
@@ -282,6 +297,9 @@ class _HabitsScreenState extends State<HabitsScreen> {
                 });
                 StorageService.saveList('hobbies', _hobbies);
                 Navigator.pop(ctx, true);
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(content: Text('✍️ ${nameCtrl.text} — ${totalHours.toStringAsFixed(1)}h logged'), duration: const Duration(seconds: 2), behavior: SnackBarBehavior.floating),
+                );
               },
               child: const Text('Save'),
             ),
@@ -308,7 +326,12 @@ class _HabitsScreenState extends State<HabitsScreen> {
         backgroundColor: Colors.teal.shade700,
         foregroundColor: Colors.white,
       ),
-      body: SingleChildScrollView(
+      body: RefreshIndicator(
+        onRefresh: () async {
+          HapticFeedback.mediumImpact();
+          await _loadData();
+        },
+        child: SingleChildScrollView(
         padding: const EdgeInsets.all(16),
         child: Column(
           children: [
@@ -338,8 +361,8 @@ class _HabitsScreenState extends State<HabitsScreen> {
                       padding: const EdgeInsets.symmetric(horizontal: 2),
                       child: GestureDetector(
                         onTap: () {
-                          // Undo: tap a filled drop to remove it
                           if (i < _waterCount) {
+                            HapticFeedback.selectionClick();
                             setState(() => _waterCount--);
                             StorageService.saveInt('water_count', _waterCount);
                           }
@@ -459,6 +482,7 @@ class _HabitsScreenState extends State<HabitsScreen> {
           ],
         ),
       ),
+    ),
     );
   }
 

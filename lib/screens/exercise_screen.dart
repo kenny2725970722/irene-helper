@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
 import '../models/workout_log.dart';
 import '../services/storage_service.dart';
@@ -250,11 +251,31 @@ class _ExerciseScreenState extends State<ExerciseScreen> {
   }
 
   void _deleteExercise(int index) {
-    setState(() {
-      _customExercises.putIfAbsent(_today, () => List.from(_todayExercises));
-      _customExercises[_today]!.removeAt(index);
-    });
-    _saveExercises();
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Delete exercise?'),
+        content: Text('Remove "${_todayExercises[index]}" from today?'),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancel')),
+          TextButton(
+            onPressed: () {
+              Navigator.pop(ctx);
+              HapticFeedback.heavyImpact();
+              setState(() {
+                _customExercises.putIfAbsent(_today, () => List.from(_todayExercises));
+                _customExercises[_today]!.removeAt(index);
+              });
+              _saveExercises();
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(content: const Text('🗑 Exercise deleted'), duration: const Duration(seconds: 2), behavior: SnackBarBehavior.floating),
+              );
+            },
+            child: const Text('Delete', style: TextStyle(color: Colors.red)),
+          ),
+        ],
+      ),
+    );
   }
 
   // ── Weight/Rep logging ──
@@ -295,6 +316,7 @@ class _ExerciseScreenState extends State<ExerciseScreen> {
               final w = double.tryParse(weightCtrl.text);
               final r = int.tryParse(repsCtrl.text);
               if (w == null || r == null) return;
+              HapticFeedback.mediumImpact();
               setState(() {
                 _workoutLogs.add(WorkoutLog(
                   id: DateTime.now().millisecondsSinceEpoch.toString(),
@@ -307,6 +329,9 @@ class _ExerciseScreenState extends State<ExerciseScreen> {
               });
               _saveLogs();
               Navigator.pop(ctx);
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(content: Text('✅ Set $setNum logged — $w lbs × $r'), duration: const Duration(seconds: 2), behavior: SnackBarBehavior.floating),
+              );
             },
             child: const Text('Log Set'),
           ),
@@ -316,10 +341,28 @@ class _ExerciseScreenState extends State<ExerciseScreen> {
   }
 
   void _deleteSet(WorkoutLog log) {
-    setState(() {
-      _workoutLogs.remove(log);
-    });
-    _saveLogs();
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Delete set?'),
+        content: Text('Remove Set ${log.setNumber} — ${log.weight.toStringAsFixed(0)} lbs × ${log.reps} reps?'),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancel')),
+          TextButton(
+            onPressed: () {
+              Navigator.pop(ctx);
+              HapticFeedback.heavyImpact();
+              setState(() => _workoutLogs.remove(log));
+              _saveLogs();
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(content: const Text('🗑 Set deleted'), duration: const Duration(seconds: 2), behavior: SnackBarBehavior.floating),
+              );
+            },
+            child: const Text('Delete', style: TextStyle(color: Colors.red)),
+          ),
+        ],
+      ),
+    );
   }
 
   // ── Rest Timer ──
@@ -363,12 +406,16 @@ class _ExerciseScreenState extends State<ExerciseScreen> {
   // ── Check-in ──
 
   Future<void> _checkIn() async {
+    HapticFeedback.heavyImpact();
     final todayStr = _dateStr(DateTime.now());
     setState(() {
       _checkedInDates.add(todayStr);
       _checkedInToday = true;
     });
     await StorageService.saveList('exercise_checkins', _checkedInDates.map((d) => {'date': d}).toList());
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('💪 Workout logged! Great job!'), duration: Duration(seconds: 2), behavior: SnackBarBehavior.floating),
+    );
   }
 
   // ── Build ──
@@ -399,7 +446,12 @@ class _ExerciseScreenState extends State<ExerciseScreen> {
           ),
         ],
       ),
-      body: SingleChildScrollView(
+      body: RefreshIndicator(
+        onRefresh: () async {
+          HapticFeedback.mediumImpact();
+          await _loadData();
+        },
+        child: SingleChildScrollView(
         padding: const EdgeInsets.all(16),
         child: Column(
           children: [
@@ -666,6 +718,7 @@ class _ExerciseScreenState extends State<ExerciseScreen> {
           ],
         ),
       ),
+    ),
     );
   }
 }

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
 import '../models/finance_entry.dart';
 import '../models/fee_item.dart';
@@ -108,6 +109,7 @@ class _FinanceScreenState extends State<FinanceScreen> {
               onPressed: () {
                 final amount = double.tryParse(amountCtrl.text);
                 if (amount == null || amount <= 0) return;
+                HapticFeedback.lightImpact();
                 setState(() {
                   _entries.insert(0, FinanceEntry(
                     id: DateTime.now().millisecondsSinceEpoch.toString(),
@@ -120,6 +122,9 @@ class _FinanceScreenState extends State<FinanceScreen> {
                 });
                 _saveEntries();
                 Navigator.pop(ctx);
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(content: Text('✅ ${isIncome ? "Income" : "Expense"} added — \$${amount.toStringAsFixed(2)}'), duration: const Duration(seconds: 2), behavior: SnackBarBehavior.floating),
+                );
               },
               child: const Text('Save'),
             ),
@@ -130,8 +135,12 @@ class _FinanceScreenState extends State<FinanceScreen> {
   }
 
   void _deleteEntry(FinanceEntry entry) {
+    HapticFeedback.heavyImpact();
     setState(() => _entries.remove(entry));
     _saveEntries();
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: const Text('🗑 Entry deleted'), duration: const Duration(seconds: 2), behavior: SnackBarBehavior.floating),
+    );
   }
 
   void _showAddFeeDialog() {
@@ -175,6 +184,7 @@ class _FinanceScreenState extends State<FinanceScreen> {
             onPressed: () {
               final amount = double.tryParse(amountCtrl.text);
               if (amount == null || amount <= 0 || nameCtrl.text.isEmpty) return;
+              HapticFeedback.lightImpact();
               setState(() {
                 _feeItems.insert(0, FeeItem(
                   id: DateTime.now().millisecondsSinceEpoch.toString(),
@@ -186,6 +196,9 @@ class _FinanceScreenState extends State<FinanceScreen> {
               });
               _saveFeeItems();
               Navigator.pop(ctx);
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(content: Text('📚 Fee added for ${nameCtrl.text.trim()}'), duration: const Duration(seconds: 2), behavior: SnackBarBehavior.floating),
+              );
             },
             child: const Text('Save'),
           ),
@@ -195,9 +208,9 @@ class _FinanceScreenState extends State<FinanceScreen> {
   }
 
   void _markFeePaid(FeeItem item) {
-    if (item.isPaid) return; // no-op if already paid
+    if (item.isPaid) return;
+    HapticFeedback.mediumImpact();
 
-    // Create linked finance entry
     final entryId = DateTime.now().millisecondsSinceEpoch.toString();
     final financeEntry = FinanceEntry(
       id: entryId,
@@ -209,37 +222,37 @@ class _FinanceScreenState extends State<FinanceScreen> {
     );
 
     setState(() {
-      // Update fee item to paid
       final idx = _feeItems.indexOf(item);
       _feeItems[idx] = item.copyWith(
         isPaid: true,
         datePaid: DateTime.now(),
         linkedEntryId: entryId,
       );
-
-      // Add income entry
       _entries.insert(0, financeEntry);
     });
 
     _saveFeeItems();
     _saveEntries();
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text('✅ Marked paid — \$${item.amount.toStringAsFixed(0)}'), duration: const Duration(seconds: 2), behavior: SnackBarBehavior.floating),
+    );
   }
 
   void _deleteFeeItem(FeeItem item) {
-    setState(() {
-      _feeItems.remove(item);
-    });
+    HapticFeedback.heavyImpact();
+    setState(() => _feeItems.remove(item));
     _saveFeeItems();
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: const Text('🗑 Fee item deleted'), duration: const Duration(seconds: 2), behavior: SnackBarBehavior.floating),
+    );
   }
 
   void _undoFeePayment(FeeItem item) {
+    HapticFeedback.mediumImpact();
     setState(() {
-      // Remove the linked finance entry
       if (item.linkedEntryId != null) {
         _entries.removeWhere((e) => e.id == item.linkedEntryId);
       }
-
-      // Revert fee item to unpaid
       final idx = _feeItems.indexOf(item);
       _feeItems[idx] = item.copyWith(
         isPaid: false,
@@ -247,9 +260,11 @@ class _FinanceScreenState extends State<FinanceScreen> {
         clearLinkedEntryId: true,
       );
     });
-
     _saveFeeItems();
     _saveEntries();
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: const Text('↩ Payment undone'), duration: const Duration(seconds: 2), behavior: SnackBarBehavior.floating),
+    );
   }
 
   @override
@@ -265,7 +280,12 @@ class _FinanceScreenState extends State<FinanceScreen> {
         backgroundColor: Colors.teal.shade700,
         foregroundColor: Colors.white,
       ),
-      body: Column(
+      body: RefreshIndicator(
+        onRefresh: () async {
+          HapticFeedback.mediumImpact();
+          await _loadEntries();
+        },
+        child: Column(
         children: [
           // ── Summary Card ──
           Container(
@@ -319,6 +339,7 @@ class _FinanceScreenState extends State<FinanceScreen> {
               color: Colors.red,
               child: const Icon(Icons.delete, color: Colors.white),
             ),
+            confirmDismiss: (_) => _confirmDismiss('Delete fee?', 'Remove ${item.studentName}\'s fee?'),
             onDismissed: (_) => _deleteFeeItem(item),
             child: ListTile(
               leading: InkWell(
@@ -354,6 +375,7 @@ class _FinanceScreenState extends State<FinanceScreen> {
                       color: Colors.orange,
                       child: const Icon(Icons.undo, color: Colors.white),
                     ),
+                    confirmDismiss: (_) => _confirmDismiss('Undo payment?', 'Mark ${item.studentName} as unpaid?'),
                     onDismissed: (_) => _undoFeePayment(item),
                     child: ListTile(
                       leading: Icon(Icons.check_box, color: Colors.green.shade600),
@@ -421,6 +443,7 @@ class _FinanceScreenState extends State<FinanceScreen> {
                           color: Colors.red,
                           child: const Icon(Icons.delete, color: Colors.white),
                         ),
+                        confirmDismiss: (_) => _confirmDismiss('Delete entry?', 'Remove \$${entry.amount.toStringAsFixed(2)} ${entry.isIncome ? "income" : "expense"}?'),
                         onDismissed: (_) => _deleteEntry(entry),
                         child: ListTile(
                           leading: CircleAvatar(
@@ -444,7 +467,26 @@ class _FinanceScreenState extends State<FinanceScreen> {
           ),
         ],
       ),
+    ),
     );
+  }
+
+  Future<bool> _confirmDismiss(String title, String message) async {
+    final result = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Text(title),
+        content: Text(message),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancel')),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text('Delete', style: TextStyle(color: Colors.red)),
+          ),
+        ],
+      ),
+    );
+    return result ?? false;
   }
 
   Widget _summaryItem(String label, String value, Color color) {

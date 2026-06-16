@@ -30,6 +30,7 @@ class SoundOption {
 /// Wraps the audioplayers package in a simple API.
 class SoundManager {
   final AudioPlayer _player = AudioPlayer();
+  final AudioPlayer _alarmPlayer = AudioPlayer();
   SoundType _currentSound = SoundType.none;
 
   /// The list of all available sounds.
@@ -89,8 +90,20 @@ class SoundManager {
     _currentSound = SoundType.none;
   }
 
+  /// Play a short alarm when the timer finishes.
+  /// Uses a separate player so ambient sound isn't interrupted.
+  Future<void> playAlarm() async {
+    try {
+      await _alarmPlayer.play(AssetSource('sounds/rain.wav'));
+      _alarmPlayer.setReleaseMode(ReleaseMode.stop);
+    } catch (e) {
+      debugPrint('Could not play alarm: $e');
+    }
+  }
+
   /// Clean up when the app closes
   void dispose() {
     _player.dispose();
+    _alarmPlayer.dispose();
   }
 }

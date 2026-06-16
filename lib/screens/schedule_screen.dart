@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
 import '../models/teaching_session.dart';
 import '../models/period_record.dart';
@@ -405,6 +406,7 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
                   studentName: studentCtrl.text,
                   subject: subjectCtrl.text,
                 );
+                HapticFeedback.lightImpact();
                 setState(() {
                   _sessions.add(session);
                   _sessions.sort((a, b) => a.dateTime.compareTo(b.dateTime));
@@ -412,6 +414,9 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
                 });
                 StorageService.saveList('teaching_sessions', _sessions);
                 Navigator.pop(ctx, true);
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(content: Text('📚 Session added with ${studentCtrl.text}'), duration: const Duration(seconds: 2), behavior: SnackBarBehavior.floating),
+                );
               },
               child: const Text('Save'),
             ),
@@ -422,11 +427,15 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
   }
 
   void _deleteSession(TeachingSession s) {
+    HapticFeedback.heavyImpact();
     setState(() {
       _sessions.remove(s);
       _teachingDates = _sessions.map((t) => _dateStr(t.dateTime)).toSet();
     });
     StorageService.saveList('teaching_sessions', _sessions);
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('🗑 Session deleted'), duration: Duration(seconds: 2), behavior: SnackBarBehavior.floating),
+    );
   }
 
   // ── Period ──
@@ -513,10 +522,10 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
                   cramps: cramps, flow: flow,
                   mood: moodCtrl.text, notes: notesCtrl.text,
                 );
+                HapticFeedback.mediumImpact();
                 setState(() {
                   _periods.insert(0, record);
                   _periods.sort((a, b) => b.startDate.compareTo(a.startDate));
-                  // Update period dates set
                   final end = record.endDate ?? record.startDate;
                   var d = record.startDate;
                   while (!d.isAfter(end)) {
@@ -526,6 +535,9 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
                 });
                 StorageService.saveList('period_records', _periods);
                 Navigator.pop(ctx, true);
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('🩸 Period logged'), duration: Duration(seconds: 2), behavior: SnackBarBehavior.floating),
+                );
               },
               child: const Text('Save'),
             ),
@@ -568,7 +580,12 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
         backgroundColor: Colors.teal.shade700,
         foregroundColor: Colors.white,
       ),
-      body: SingleChildScrollView(
+      body: RefreshIndicator(
+        onRefresh: () async {
+          HapticFeedback.mediumImpact();
+          await _loadData();
+        },
+        child: SingleChildScrollView(
         padding: const EdgeInsets.all(16),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -598,6 +615,20 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
                 key: Key(s.id),
                 direction: DismissDirection.endToStart,
                 background: Container(alignment: Alignment.centerRight, padding: const EdgeInsets.only(right: 20), color: Colors.red, child: const Icon(Icons.delete, color: Colors.white)),
+                confirmDismiss: (_) async {
+                  final result = await showDialog<bool>(
+                    context: context,
+                    builder: (ctx) => AlertDialog(
+                      title: const Text('Delete session?'),
+                      content: Text('Remove ${s.studentName}\'s session?'),
+                      actions: [
+                        TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancel')),
+                        TextButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('Delete', style: TextStyle(color: Colors.red))),
+                      ],
+                    ),
+                  );
+                  return result ?? false;
+                },
                 onDismissed: (_) => _deleteSession(s),
                 child: ListTile(
                   leading: CircleAvatar(
@@ -664,6 +695,7 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
           ],
         ),
       ),
+    ),
     );
   }
 
