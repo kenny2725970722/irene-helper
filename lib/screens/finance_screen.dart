@@ -19,6 +19,14 @@ class _FinanceScreenState extends State<FinanceScreen> {
 
   static const _incomeCategories = ['Salary', 'Tutoring', 'Freelance', 'Other'];
   static const _expenseCategories = ['Food', 'Transport', 'Shopping', 'Bills', 'Other'];
+  static const _incomeMethods = ['Bank Transfer', 'Cash', 'PayMe', 'Check', 'Other'];
+  static const _expenseMethods = ['Credit Card', 'Cash', 'PayMe', 'Bank Transfer', 'Other'];
+  static const _methodEmojis = {
+    'Credit Card': '💳', 'Cash': '💵', 'PayMe': '📱',
+    'Bank Transfer': '🏦', 'Check': '📝', 'Other': '💰',
+  };
+
+  DateTime _selectedDate = DateTime.now();
 
   @override
   void initState() {
@@ -47,16 +55,14 @@ class _FinanceScreenState extends State<FinanceScreen> {
   }
 
   double get _todayIncome {
-    final today = DateTime.now();
     return _entries
-        .where((e) => e.isIncome && _isSameDay(e.date, today))
+        .where((e) => e.isIncome && _isSameDay(e.date, _selectedDate))
         .fold(0.0, (sum, e) => sum + e.amount);
   }
 
   double get _todayExpenses {
-    final today = DateTime.now();
     return _entries
-        .where((e) => !e.isIncome && _isSameDay(e.date, today))
+        .where((e) => !e.isIncome && _isSameDay(e.date, _selectedDate))
         .fold(0.0, (sum, e) => sum + e.amount);
   }
 
@@ -68,6 +74,7 @@ class _FinanceScreenState extends State<FinanceScreen> {
     final amountCtrl = TextEditingController();
     final noteCtrl = TextEditingController();
     String category = isIncome ? _incomeCategories.first : _expenseCategories.first;
+    String paymentMethod = isIncome ? _incomeMethods.first : _expenseMethods.first;
 
     showDialog(
       context: context,
@@ -95,6 +102,17 @@ class _FinanceScreenState extends State<FinanceScreen> {
                 decoration: const InputDecoration(labelText: 'Category'),
               ),
               const SizedBox(height: 12),
+              DropdownButtonFormField<String>(
+                initialValue: paymentMethod,
+                items: (isIncome ? _incomeMethods : _expenseMethods)
+                    .map((m) => DropdownMenuItem(
+                        value: m,
+                        child: Text('${_methodEmojis[m] ?? '💰'} $m')))
+                    .toList(),
+                onChanged: (val) => setDialog(() => paymentMethod = val!),
+                decoration: const InputDecoration(labelText: 'Payment Method'),
+              ),
+              const SizedBox(height: 12),
               TextField(
                 controller: noteCtrl,
                 decoration: const InputDecoration(
@@ -118,6 +136,7 @@ class _FinanceScreenState extends State<FinanceScreen> {
                     category: category,
                     note: noteCtrl.text,
                     date: DateTime.now(),
+                    paymentMethod: paymentMethod,
                   ));
                 });
                 _saveEntries();
@@ -271,7 +290,9 @@ class _FinanceScreenState extends State<FinanceScreen> {
   Widget build(BuildContext context) {
     if (_loading) return const Scaffold(body: Center(child: CircularProgressIndicator()));
     final net = _todayIncome - _todayExpenses;
-    final todayEntries = _entries.where((e) => _isSameDay(e.date, DateTime.now())).toList();
+    final todayEntries = _entries.where((e) => _isSameDay(e.date, _selectedDate)).toList();
+    final isToday = _isSameDay(_selectedDate, DateTime.now());
+    final isFuture = _selectedDate.isAfter(DateTime.now());
 
     return Scaffold(
       appBar: AppBar(
@@ -300,7 +321,7 @@ class _FinanceScreenState extends State<FinanceScreen> {
             child: Column(
               children: [
                 Text(
-                  'Net Today: ${net >= 0 ? '+' : ''}\$${net.toStringAsFixed(2)}',
+                  '${isToday ? "Net Today" : "Net on ${DateFormat('MMM d').format(_selectedDate)}"}: ${net >= 0 ? '+' : ''}\$${net.toStringAsFixed(2)}',
                   style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: Colors.white),
                 ),
                 const SizedBox(height: 12),
@@ -416,12 +437,60 @@ class _FinanceScreenState extends State<FinanceScreen> {
             ],
           ),
 
+          // ── Date Navigation ──
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                IconButton(
+                  icon: const Icon(Icons.chevron_left),
+                  onPressed: () {
+                    HapticFeedback.selectionClick();
+                    setState(() => _selectedDate = _selectedDate.subtract(const Duration(days: 1)));
+                  },
+                ),
+                GestureDetector(
+                  onTap: () {
+                    HapticFeedback.lightImpact();
+                    setState(() => _selectedDate = DateTime.now());
+                  },
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                    decoration: BoxDecoration(
+                      color: isToday ? Colors.teal.shade100 : Colors.grey.shade100,
+                      borderRadius: BorderRadius.circular(16),
+                    ),
+                    child: Text(
+                      isToday ? 'Today' : DateFormat('EEE, MMM d').format(_selectedDate),
+                      style: TextStyle(
+                        fontSize: 15,
+                        fontWeight: FontWeight.bold,
+                        color: isToday ? Colors.teal.shade700 : Colors.grey.shade700,
+                      ),
+                    ),
+                  ),
+                ),
+                IconButton(
+                  icon: const Icon(Icons.chevron_right),
+                  onPressed: isFuture ? null : () {
+                    HapticFeedback.selectionClick();
+                    setState(() => _selectedDate = _selectedDate.add(const Duration(days: 1)));
+                  },
+                ),
+              ],
+            ),
+          ),
+
           // ── Transaction List ──
           Padding(
             padding: const EdgeInsets.all(16),
             child: Row(
               children: [
-                Text('Today\'s Transactions', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.grey.shade700)),
+                Text(
+                  isToday ? 'Today\'s Transactions' : 'Transactions — ${DateFormat('MMM d, yyyy').format(_selectedDate)}',
+                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.grey.shade700),
+                ),
                 const Spacer(),
                 Text('${todayEntries.length} entries', style: TextStyle(color: Colors.grey.shade500)),
               ],
@@ -451,7 +520,9 @@ class _FinanceScreenState extends State<FinanceScreen> {
                             child: Text(entry.isIncome ? '+' : '-', style: TextStyle(color: entry.isIncome ? Colors.green : Colors.red)),
                           ),
                           title: Text(entry.category),
-                          subtitle: Text(entry.note.isNotEmpty ? entry.note : DateFormat('h:mm a').format(entry.date)),
+                          subtitle: Text(
+                            '${_methodEmojis[entry.paymentMethod] ?? '💰'} ${entry.paymentMethod}${entry.note.isNotEmpty ? ' • ${entry.note}' : ''} • ${DateFormat('h:mm a').format(entry.date)}',
+                          ),
                           trailing: Text(
                             '${entry.isIncome ? '+' : '-'}\$${entry.amount.toStringAsFixed(2)}',
                             style: TextStyle(

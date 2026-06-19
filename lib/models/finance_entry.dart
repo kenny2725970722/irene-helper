@@ -6,6 +6,7 @@ class FinanceEntry {
   final String category;
   final String note;
   final DateTime date;
+  final String paymentMethod; // e.g. Cash, Credit Card, PayMe, Bank Transfer
 
   FinanceEntry({
     required this.id,
@@ -14,6 +15,7 @@ class FinanceEntry {
     required this.category,
     this.note = '',
     required this.date,
+    this.paymentMethod = 'Cash',
   });
 
   /// Create from JSON (stored in SharedPreferences)
@@ -25,6 +27,7 @@ class FinanceEntry {
       category: json['category'] as String,
       note: json['note'] as String? ?? '',
       date: DateTime.parse(json['date'] as String),
+      paymentMethod: json['paymentMethod'] as String? ?? 'Cash',
     );
   }
 
@@ -36,6 +39,7 @@ class FinanceEntry {
       'category': category,
       'note': note,
       'date': date.toIso8601String(),
+      'paymentMethod': paymentMethod,
     };
   }
 }
