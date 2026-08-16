@@ -306,8 +306,9 @@ class _FinanceScreenState extends State<FinanceScreen> {
           HapticFeedback.mediumImpact();
           await _loadEntries();
         },
-        child: Column(
-        children: [
+        child: ListView(
+          physics: const AlwaysScrollableScrollPhysics(),
+          children: [
           // ── Summary Card ──
           Container(
             margin: const EdgeInsets.all(16),
@@ -496,46 +497,41 @@ class _FinanceScreenState extends State<FinanceScreen> {
               ],
             ),
           ),
-          Expanded(
-            child: todayEntries.isEmpty
-                ? Center(child: Text('No transactions today', style: TextStyle(color: Colors.grey.shade400)))
-                : ListView.builder(
-                    itemCount: todayEntries.length,
-                    itemBuilder: (ctx, i) {
-                      final entry = todayEntries[i];
-                      return Dismissible(
-                        key: Key(entry.id),
-                        direction: DismissDirection.endToStart,
-                        background: Container(
-                          alignment: Alignment.centerRight,
-                          padding: const EdgeInsets.only(right: 20),
-                          color: Colors.red,
-                          child: const Icon(Icons.delete, color: Colors.white),
-                        ),
-                        confirmDismiss: (_) => _confirmDismiss('Delete entry?', 'Remove \$${entry.amount.toStringAsFixed(2)} ${entry.isIncome ? "income" : "expense"}?'),
-                        onDismissed: (_) => _deleteEntry(entry),
-                        child: ListTile(
-                          leading: CircleAvatar(
-                            backgroundColor: entry.isIncome ? Colors.green.shade100 : Colors.red.shade100,
-                            child: Text(entry.isIncome ? '+' : '-', style: TextStyle(color: entry.isIncome ? Colors.green : Colors.red)),
-                          ),
-                          title: Text(entry.category),
-                          subtitle: Text(
-                            '${_methodEmojis[entry.paymentMethod] ?? '💰'} ${entry.paymentMethod}${entry.note.isNotEmpty ? ' • ${entry.note}' : ''} • ${DateFormat('h:mm a').format(entry.date)}',
-                          ),
-                          trailing: Text(
-                            '${entry.isIncome ? '+' : '-'}\$${entry.amount.toStringAsFixed(2)}',
-                            style: TextStyle(
-                              fontSize: 16,
-                              fontWeight: FontWeight.bold,
-                              color: entry.isIncome ? Colors.green.shade700 : Colors.red.shade700,
-                            ),
-                          ),
-                        ),
-                      );
-                    },
-                  ),
-          ),
+          if (todayEntries.isEmpty)
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: 32),
+              child: Center(child: Text('No transactions today', style: TextStyle(color: Colors.grey.shade400))),
+            ),
+          ...todayEntries.map((entry) => Dismissible(
+            key: Key(entry.id),
+            direction: DismissDirection.endToStart,
+            background: Container(
+              alignment: Alignment.centerRight,
+              padding: const EdgeInsets.only(right: 20),
+              color: Colors.red,
+              child: const Icon(Icons.delete, color: Colors.white),
+            ),
+            confirmDismiss: (_) => _confirmDismiss('Delete entry?', 'Remove \$${entry.amount.toStringAsFixed(2)} ${entry.isIncome ? "income" : "expense"}?'),
+            onDismissed: (_) => _deleteEntry(entry),
+            child: ListTile(
+              leading: CircleAvatar(
+                backgroundColor: entry.isIncome ? Colors.green.shade100 : Colors.red.shade100,
+                child: Text(entry.isIncome ? '+' : '-', style: TextStyle(color: entry.isIncome ? Colors.green : Colors.red)),
+              ),
+              title: Text(entry.category),
+              subtitle: Text(
+                '${_methodEmojis[entry.paymentMethod] ?? '💰'} ${entry.paymentMethod}${entry.note.isNotEmpty ? ' • ${entry.note}' : ''} • ${DateFormat('h:mm a').format(entry.date)}',
+              ),
+              trailing: Text(
+                '${entry.isIncome ? '+' : '-'}\$${entry.amount.toStringAsFixed(2)}',
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                  color: entry.isIncome ? Colors.green.shade700 : Colors.red.shade700,
+                ),
+              ),
+            ),
+          )).toList(),
         ],
       ),
     ),
