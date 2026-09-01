@@ -70,6 +70,11 @@ class _FinanceScreenState extends State<FinanceScreen> {
     return a.year == b.year && a.month == b.month && a.day == b.day;
   }
 
+  DateTime get _entryTimestamp {
+    final now = DateTime.now();
+    return DateTime(_selectedDate.year, _selectedDate.month, _selectedDate.day, now.hour, now.minute);
+  }
+
   void _showAddDialog({required bool isIncome}) {
     final amountCtrl = TextEditingController();
     final noteCtrl = TextEditingController();
@@ -135,7 +140,7 @@ class _FinanceScreenState extends State<FinanceScreen> {
                     isIncome: isIncome,
                     category: category,
                     note: noteCtrl.text,
-                    date: DateTime.now(),
+                    date: _entryTimestamp,
                     paymentMethod: paymentMethod,
                   ));
                 });
@@ -237,14 +242,14 @@ class _FinanceScreenState extends State<FinanceScreen> {
       isIncome: true,
       category: 'Tutoring',
       note: 'Paid by ${item.studentName}',
-      date: DateTime.now(),
+      date: _entryTimestamp,
     );
 
     setState(() {
       final idx = _feeItems.indexOf(item);
       _feeItems[idx] = item.copyWith(
         isPaid: true,
-        datePaid: DateTime.now(),
+        datePaid: _entryTimestamp,
         linkedEntryId: entryId,
       );
       _entries.insert(0, financeEntry);
