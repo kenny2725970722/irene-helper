@@ -5,6 +5,7 @@ import 'screens/finance_screen.dart';
 import 'screens/exercise_screen.dart';
 import 'screens/habits_screen.dart';
 import 'screens/schedule_screen.dart';
+import 'screens/skincare_screen.dart';
 import 'services/notification_service.dart';
 
 void main() async {
@@ -64,6 +65,7 @@ class _MainScreenState extends State<MainScreen> {
     ExerciseScreen(),
     HabitsScreen(),
     ScheduleScreen(),
+    SkincareScreen(),
   ];
 
   @override
@@ -103,6 +105,11 @@ class _MainScreenState extends State<MainScreen> {
             icon: Icon(Icons.calendar_month_outlined),
             selectedIcon: Icon(Icons.calendar_month),
             label: 'Schedule',
+          ),
+          NavigationDestination(
+            icon: Icon(Icons.spa_outlined),
+            selectedIcon: Icon(Icons.spa),
+            label: 'Skincare',
           ),
         ],
       ),
