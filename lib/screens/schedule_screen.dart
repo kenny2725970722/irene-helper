@@ -4,6 +4,7 @@ import 'package:intl/intl.dart';
 import '../models/teaching_session.dart';
 import '../models/period_record.dart';
 import '../services/storage_service.dart';
+import '../services/gold_price_service.dart';
 
 class ScheduleScreen extends StatefulWidget {
   const ScheduleScreen({super.key});
@@ -16,6 +17,9 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
   List<TeachingSession> _sessions = [];
   List<PeriodRecord> _periods = [];
   bool _loading = true;
+
+  GoldPrice? _goldPrice;
+  String? _goldError;
 
   // Exercise timetable
   Map<int, String> _timetable = {};
@@ -39,6 +43,7 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
   void initState() {
     super.initState();
     _loadData();
+    _loadGoldPrice();
   }
 
   String _dateStr(DateTime d) => DateFormat('yyyy-MM-dd').format(d);
@@ -107,6 +112,20 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
     }).toSet();
 
     setState(() => _loading = false);
+  }
+
+  Future<void> _loadGoldPrice() async {
+    try {
+      final price = await fetchGoldPrice();
+      if (!mounted) return;
+      setState(() {
+        _goldPrice = price;
+        _goldError = null;
+      });
+    } catch (_) {
+      if (!mounted) return;
+      setState(() => _goldError = 'failed');
+    }
   }
 
   // ── Day Status Calculator ──
@@ -583,7 +602,7 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
       body: RefreshIndicator(
         onRefresh: () async {
           HapticFeedback.mediumImpact();
-          await _loadData();
+          await Future.wait([_loadData(), _loadGoldPrice()]);
         },
         child: SingleChildScrollView(
         padding: const EdgeInsets.all(16),
@@ -640,6 +659,16 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
                 ),
               ),
             )),
+            const SizedBox(height: 24),
+
+            // ── GOLD PRICE ──
+            Row(
+              children: [
+                const Text('💰 金價 9999/999金(克)', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+              ],
+            ),
+            const SizedBox(height: 8),
+            _buildGoldPriceCard(),
             const SizedBox(height: 24),
 
             // ── PERIOD TRACKER ──
@@ -709,6 +738,66 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
   }
 
   Widget _periodInfo(String label, String value) {
+    return Column(
+      children: [
+        Text(label, style: TextStyle(fontSize: 12, color: Colors.grey.shade600)),
+        Text(value, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+      ],
+    );
+  }
+
+  Widget _buildGoldPriceCard() {
+    // Loading (no price and no error yet)
+    if (_goldPrice == null && _goldError == null) {
+      return const Card(
+        child: Padding(
+          padding: EdgeInsets.all(20),
+          child: Center(child: CircularProgressIndicator()),
+        ),
+      );
+    }
+
+    // Error
+    if (_goldError != null) {
+      return Card(
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: Row(
+            children: [
+              Icon(Icons.error_outline, color: Colors.amber.shade800),
+              const SizedBox(width: 8),
+              Expanded(child: Text('金價載入失敗', style: TextStyle(color: Colors.grey.shade600))),
+              TextButton(
+                onPressed: () {
+                  setState(() => _goldError = null);
+                  _loadGoldPrice();
+                },
+                child: const Text('重試'),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+
+    // Success
+    final price = _goldPrice!;
+    return Card(
+      color: Colors.amber.shade50,
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.spaceAround,
+          children: [
+            _goldInfo('賣出 (HKD)', 'HK\$${price.sellPrice}'),
+            _goldInfo('買入 (HKD)', 'HK\$${price.buyPrice}'),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _goldInfo(String label, String value) {
     return Column(
       children: [
         Text(label, style: TextStyle(fontSize: 12, color: Colors.grey.shade600)),
