@@ -249,7 +249,7 @@ class _SkincareScreenState extends State<SkincareScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('🧴 Skincare Deals'),
+        title: const Text('🧴 護膚品優惠'),
         centerTitle: true,
         backgroundColor: Colors.teal.shade700,
         foregroundColor: Colors.white,

@@ -3,7 +3,8 @@ import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
 import '../models/hobby_record.dart';
 import '../services/storage_service.dart';
-import '../services/notification_service.dart';
+import 'focus_screen.dart';
+import 'skincare_screen.dart';
 
 class HabitsScreen extends StatefulWidget {
   const HabitsScreen({super.key});
@@ -19,8 +20,6 @@ class _HabitsScreenState extends State<HabitsScreen> {
   List<int> _skincareDays = [1, 3, 5]; // Mon=1, Wed=3, Fri=5 (default)
   List<HobbyRecord> _hobbies = [];
   bool _loading = true;
-  bool _waterNotifyOn = false;
-  bool _skincareNotifyOn = false;
 
   static const _dayNames = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
   static const _dayFullNames = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
@@ -58,10 +57,6 @@ class _HabitsScreenState extends State<HabitsScreen> {
     final hobbyData = await StorageService.loadList('hobbies');
     _hobbies = hobbyData.map((e) => HobbyRecord.fromJson(e)).toList();
     _hobbies.sort((a, b) => b.date.compareTo(a.date));
-
-    // Notification preferences
-    _waterNotifyOn = await StorageService.loadInt('water_notify') == 1;
-    _skincareNotifyOn = await StorageService.loadInt('skincare_notify') == 1;
 
     setState(() => _loading = false);
   }
@@ -120,7 +115,7 @@ class _HabitsScreenState extends State<HabitsScreen> {
       context: context,
       builder: (ctx) => StatefulBuilder(
         builder: (ctx, setDialog) => AlertDialog(
-          title: const Text('🧖 Skincare Days'),
+          title: const Text('🧖 敷面膜日'),
           content: Column(
             mainAxisSize: MainAxisSize.min,
             children: List.generate(7, (i) {
@@ -325,6 +320,15 @@ class _HabitsScreenState extends State<HabitsScreen> {
         centerTitle: true,
         backgroundColor: Colors.teal.shade700,
         foregroundColor: Colors.white,
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.timer_outlined),
+            tooltip: 'Focus timer',
+            onPressed: () => Navigator.of(context).push(
+              MaterialPageRoute(builder: (_) => const FocusScreen()),
+            ),
+          ),
+        ],
       ),
       body: RefreshIndicator(
         onRefresh: () async {
@@ -338,21 +342,7 @@ class _HabitsScreenState extends State<HabitsScreen> {
             // ── WATER ──
             _buildSectionCard(
               title: '💧 Water',
-              subtitle: 'Stay hydrated — hourly reminders',
-              trailing: Switch(
-                value: _waterNotifyOn,
-                activeTrackColor: Colors.blue.shade200,
-                activeThumbColor: Colors.blue,
-                onChanged: (val) async {
-                  setState(() => _waterNotifyOn = val);
-                  await StorageService.saveInt('water_notify', val ? 1 : 0);
-                  if (val) {
-                    await NotificationService.scheduleWaterReminders();
-                  } else {
-                    await NotificationService.cancelWaterReminders();
-                  }
-                },
-              ),
+              subtitle: 'Stay hydrated',
               child: Column(
                 children: [
                   Row(
@@ -395,32 +385,13 @@ class _HabitsScreenState extends State<HabitsScreen> {
 
             // ── SKINCARE ──
             _buildSectionCard(
-              title: '🧖 Skincare',
+              title: '🧖 敷面膜',
               subtitle: 'Cleansing mask — $_skincareDaysLabel',
-              trailing: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  IconButton(
-                    onPressed: _editSkincareDays,
-                    icon: const Icon(Icons.edit_calendar, size: 20),
-                    color: Colors.pink.shade400,
-                    tooltip: 'Edit days',
-                  ),
-                  Switch(
-                    value: _skincareNotifyOn,
-                    activeTrackColor: Colors.pink.shade200,
-                    activeThumbColor: Colors.pink,
-                    onChanged: (val) async {
-                      setState(() => _skincareNotifyOn = val);
-                      await StorageService.saveInt('skincare_notify', val ? 1 : 0);
-                      if (val) {
-                        await NotificationService.scheduleSkincareReminders();
-                      } else {
-                        await NotificationService.cancelSkincareReminders();
-                      }
-                    },
-                  ),
-                ],
+              trailing: IconButton(
+                onPressed: _editSkincareDays,
+                icon: const Icon(Icons.edit_calendar, size: 20),
+                color: Colors.pink.shade400,
+                tooltip: 'Edit days',
               ),
               child: Column(
                 children: [
@@ -452,6 +423,17 @@ class _HabitsScreenState extends State<HabitsScreen> {
                   ),
                 ],
               ),
+            ),
+            const SizedBox(height: 12),
+
+            // ── SKINCARE DEALS ──
+            _buildSectionCard(
+              title: '🧴 護膚品優惠',
+              subtitle: '優惠情報與各店價格比較',
+              onTap: () => Navigator.of(context).push(
+                MaterialPageRoute(builder: (_) => const SkincareScreen()),
+              ),
+              trailing: const Icon(Icons.chevron_right),
             ),
             const SizedBox(height: 12),
 
@@ -489,27 +471,34 @@ class _HabitsScreenState extends State<HabitsScreen> {
   Widget _buildSectionCard({
     required String title,
     required String subtitle,
-    required Widget child,
+    Widget? child,
     Widget? trailing,
+    VoidCallback? onTap,
   }) {
     return Card(
       elevation: 2,
+      clipBehavior: Clip.antiAlias,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                Expanded(child: Text(title, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold))),
-                if (trailing != null) trailing,
+      child: InkWell(
+        onTap: onTap,
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Expanded(child: Text(title, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold))),
+                  if (trailing != null) trailing,
+                ],
+              ),
+              Text(subtitle, style: TextStyle(fontSize: 13, color: Colors.grey.shade500)),
+              if (child != null) ...[
+                const SizedBox(height: 16),
+                child,
               ],
-            ),
-            Text(subtitle, style: TextStyle(fontSize: 13, color: Colors.grey.shade500)),
-            const SizedBox(height: 16),
-            child,
-          ],
+            ],
+          ),
         ),
       ),
     );

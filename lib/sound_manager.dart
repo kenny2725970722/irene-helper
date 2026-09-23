@@ -42,19 +42,19 @@ class SoundManager {
       label: 'Rain',
       emoji: '🌧️',
       type: SoundType.rain,
-      assetPath: 'sounds/rain.wav',
+      assetPath: 'sounds/rain.mp3',
     ),
     SoundOption(
       label: 'Fire',
       emoji: '🔥',
       type: SoundType.firewood,
-      assetPath: 'sounds/firewood.wav',
+      assetPath: 'sounds/firewood.mp3',
     ),
     SoundOption(
       label: 'Cafe',
       emoji: '☕',
       type: SoundType.cafe,
-      assetPath: 'sounds/cafe.wav',
+      assetPath: 'sounds/cafe.mp3',
     ),
   ];
 
@@ -94,7 +94,7 @@ class SoundManager {
   /// Uses a separate player so ambient sound isn't interrupted.
   Future<void> playAlarm() async {
     try {
-      await _alarmPlayer.play(AssetSource('sounds/rain.wav'));
+      await _alarmPlayer.play(AssetSource('sounds/rain.mp3'));
       _alarmPlayer.setReleaseMode(ReleaseMode.stop);
     } catch (e) {
       debugPrint('Could not play alarm: $e');

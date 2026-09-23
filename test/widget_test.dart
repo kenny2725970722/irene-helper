@@ -7,11 +7,11 @@ void main() {
     await tester.pumpWidget(const IreneHelperApp());
 
     // Should show all 6 tab labels
-    expect(find.text('Focus'), findsOneWidget);
+    expect(find.text('Home'), findsOneWidget);
     expect(find.text('Finance'), findsOneWidget);
     expect(find.text('Exercise'), findsOneWidget);
     expect(find.text('Habits'), findsOneWidget);
     expect(find.text('Schedule'), findsOneWidget);
-    expect(find.text('Skincare'), findsOneWidget);
+    expect(find.text('Other'), findsOneWidget);
   });
 }

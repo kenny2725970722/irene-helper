@@ -1,21 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'screens/focus_screen.dart';
+import 'screens/home_screen.dart';
 import 'screens/finance_screen.dart';
 import 'screens/exercise_screen.dart';
 import 'screens/habits_screen.dart';
 import 'screens/schedule_screen.dart';
-import 'screens/skincare_screen.dart';
-import 'services/notification_service.dart';
+import 'screens/other_screen.dart';
 
-void main() async {
-  WidgetsFlutterBinding.ensureInitialized();
-  // Notifications don't work on web — init only on native platforms
-  try {
-    await NotificationService.init();
-  } catch (_) {
-    // Running on web or unsupported platform — skip
-  }
+void main() {
   runApp(const IreneHelperApp());
 }
 
@@ -47,7 +39,7 @@ class IreneHelperApp extends StatelessWidget {
   }
 }
 
-/// The main screen with bottom navigation bar — 5 tabs.
+/// The main screen with bottom navigation bar — 6 tabs.
 class MainScreen extends StatefulWidget {
   const MainScreen({super.key});
 
@@ -58,14 +50,14 @@ class MainScreen extends StatefulWidget {
 class _MainScreenState extends State<MainScreen> {
   int _currentIndex = 0;
 
-  // The 5 screens — each is a different tab
+  // The 6 screens — each is a different tab
   final List<Widget> _screens = const [
-    FocusScreen(),
+    HomeScreen(),
     FinanceScreen(),
     ExerciseScreen(),
     HabitsScreen(),
     ScheduleScreen(),
-    SkincareScreen(),
+    OtherScreen(),
   ];
 
   @override
@@ -82,9 +74,9 @@ class _MainScreenState extends State<MainScreen> {
         },
         destinations: const [
           NavigationDestination(
-            icon: Icon(Icons.timer_outlined),
-            selectedIcon: Icon(Icons.timer),
-            label: 'Focus',
+            icon: Icon(Icons.home_outlined),
+            selectedIcon: Icon(Icons.home),
+            label: 'Home',
           ),
           NavigationDestination(
             icon: Icon(Icons.account_balance_wallet_outlined),
@@ -107,9 +99,9 @@ class _MainScreenState extends State<MainScreen> {
             label: 'Schedule',
           ),
           NavigationDestination(
-            icon: Icon(Icons.spa_outlined),
-            selectedIcon: Icon(Icons.spa),
-            label: 'Skincare',
+            icon: Icon(Icons.build_outlined),
+            selectedIcon: Icon(Icons.build),
+            label: 'Other',
           ),
         ],
       ),
